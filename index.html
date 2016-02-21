@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+	<head>
+        <title>Asterhythm</title>
+
+		<script type="text/javascript" src="js/jquery.js"></script>
+        <script type="text/javascript" src="js/jxon.js"></script>
+		<script type="text/javascript" src="js/script.js"></script>
+	</head>
+
+	<body>
+        <div id="searchcontent">
+    		<p>Search and we'll generate a playlist!</p>
+    		<input type="text" id="query">
+    		<input type="submit" id="query-btn" value="Let's Go!">
+
+    		<form>
+                <label for="genre">Genre</label>
+    			<input type="radio" name="pref" id="genre" value="genre" checked><br>
+                <label for="artist">Artist</label>
+    			<input type="radio" name="pref" id="artist" value="artist"><br>
+                <label for="song">Song</label>
+    			<input type="radio" name="pref" id="song" value="song"><br>
+    		</form>
+        </div>
+
+        <div id="songcontent">
+            <div id="songtitle"></div>
+            <div id="songartist"></div>
+            <div id="cover"></div>
+            <div id="lyrics"></div>
+        </div>
+	</body>
+
+</html>
