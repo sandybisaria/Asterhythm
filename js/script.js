@@ -29,7 +29,11 @@ window.onbeforeunload = function() {
 }
 
 $(document).ready(function () {
-    $("#query-btn").on("click", createPlaylist);
+    $("#song-content").hide();
+    $("#search-bar").submit(function() {
+        createPlaylist();
+        return false;
+    })
 });
 
 function createPlaylist() {
@@ -37,7 +41,7 @@ function createPlaylist() {
     var pref = $("input[name=pref]:checked").val();
 
     if (query === "") {
-        alert("Please search for something");
+        // alert("Please search for something");
         return;
     }
 
@@ -212,11 +216,10 @@ function onGetSpotifyTrack(data, textStatus, jqXHR, echonestTrack) {
     var artist = data.artists[0].name;
     var title = data.name;
 
-    $("#songartist").html(artist);
-    $("#songtitle").html(title);
+    $("#song-artist").html(artist);
+    $("#song-title").html(title);
 
-    // Hide searching UI; made it this far so no need to search...
-    $("#searchcontent").hide();
+    adjustUI()
 
     var getChartlyricsTrackParams = {
         "artist" : artist,
@@ -230,6 +233,12 @@ function onGetSpotifyTrack(data, textStatus, jqXHR, echonestTrack) {
     })
         .done(onGetLyrics)
         .fail(onGetLyricsError);
+}
+
+function adjustUI() {
+    // Hide searching UI; made it this far so no need to search...
+    $("#search-content").hide();
+    $("#song-content").show();
 }
 
 function onGetSpotifyTrackError(jqXHR, textStatus, errorThrown) {
@@ -295,7 +304,7 @@ function remixSong(track, percent, player, songUrl) {
                 "volume" : 1
             }, fadeTime)
 
-            var triggerFadeOutTime = (9*duration/10) * 1000 //ms
+            var triggerFadeOutTime = (8.5*duration/10) * 1000 //ms
             fadeInId = setTimeout(function() {
                 playerBase.animate({
                     "volume" : 0
