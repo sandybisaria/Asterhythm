@@ -176,7 +176,9 @@ function onGetNextSong(data, textStatus, jqXHR) {
         "cache" : false,
         "url" : getSpotifyTrackUrl
     })
-        .done(onGetSpotifyTrack)
+        .done(function (data, textStatus, jqXHR) {
+            onGetSpotifyTrack(data, textStatus, jqXHR, nextSong)
+        })
         .fail(onGetSpotifyTrackError);
 }
 
@@ -186,21 +188,20 @@ function onGetNextSongError(jqXHR, textStatus, errorThrown) {
     console.log(errorThrown);
 }
 
-function onGetSpotifyTrack(data, textStatus, jqXHR) {
+function onGetSpotifyTrack(data, textStatus, jqXHR, echonestTrack) {
     var previewUrl = data.preview_url;
     if (previewUrl === undefined || previewUrl == null) {
         getNextSong(); // For now, skip songs without
         return;
     }
 
-    // console.log(previewUrl);
-    // console.log(data);
-
-    var player = new Audio(previewUrl);
-    player.play();
-    player.onended = function() {
-        getNextSong();
-    }
+    // Load the track into the remixer
+    var remixerContext = new AudioContext();
+    var remixer = createJRemixer(remixerContext, $, echonestApiKey);
+    var player = remixer.getPlayer();
+    remixer.remixTrackById(echonestTrack.id, previewUrl, function(track, percent) {
+        remixSong(track, percent, player, previewUrl);
+    });
 
     // Load the lyrics from ChartLyrics
     var getChartlyricsTrackUrl = chartlyricsBaseUrl + "SearchLyricDirect";
@@ -248,4 +249,56 @@ function onGetLyricsError(jqXHR, textStatus, errorThrown) {
     console.log(jqXHR);
     console.log(textStatus);
     console.log(errorThrown);
+}
+
+function remixSong(track, percent, player, songUrl) {
+    if (track.status === "ok") {
+        var gainCounter = 0;
+        var gainArray = new Array();
+
+        var remixed = new Array();
+        var beatCount = track.analysis.beats.length
+        for (var i=0; i < beatCount; i++) {
+            beat = track.analysis.beats[i]
+            if (i/beatCount < 0.1) {
+                gainArray.push(10*i/beatCount)
+            } else if ((10-i)/beatCount > 0.9) {
+                gainArray.push(10*(10-i)/beatCount)
+            } else {
+                gainArray.push(1)
+            }
+            remixed.push(beat)
+        }
+
+        // player.play(0, remixed);
+
+        var playerBase = $("#songstreamer")
+        var player = playerBase[0]
+        player.src = songUrl;
+        player.volume = 0;
+        player.play();
+
+        player.ondurationchange = function() {
+            var duration = player.duration;
+            if (duration === NaN) {
+                return;
+            }
+
+            var fadeTime = (duration/10) * 1000 //ms
+
+            playerBase.animate({
+                "volume" : 1
+            }, fadeTime)
+
+            var triggerFadeOutTime = (9*duration/10) * 1000 //ms
+            setTimeout(function() {
+                playerBase.animate({
+                    "volume" : 0
+                }, fadeTime)
+            }, triggerFadeOutTime)
+        }
+        player.onended = function() {
+            getNextSong();
+        }
+    }
 }
