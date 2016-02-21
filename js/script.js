@@ -10,6 +10,8 @@ var chartlyricsBaseUrl = "http://api.chartlyrics.com/apiv1.asmx/"
 var sessionId = "";
 var bucketVals = ["id:spotify", "tracks"]; // Used in many Echo Nest requests
 
+var remixerContext = null;
+
 var clearSession = function() {
     var deleteUrl = echonestBaseUrl + "api/v4/playlist/dynamic/delete";
     var deleteParams = {
@@ -196,7 +198,9 @@ function onGetSpotifyTrack(data, textStatus, jqXHR, echonestTrack) {
     }
 
     // Load the track into the remixer
-    var remixerContext = new AudioContext();
+    if (remixerContext === null) {
+        remixerContext= new AudioContext();
+    }
     var remixer = createJRemixer(remixerContext, $, echonestApiKey);
     var player = remixer.getPlayer();
     remixer.remixTrackById(echonestTrack.id, previewUrl, function(track, percent) {
@@ -278,6 +282,7 @@ function remixSong(track, percent, player, songUrl) {
         player.volume = 0;
         player.play();
 
+        var fadeInId = null;
         player.ondurationchange = function() {
             var duration = player.duration;
             if (duration === NaN) {
@@ -291,13 +296,16 @@ function remixSong(track, percent, player, songUrl) {
             }, fadeTime)
 
             var triggerFadeOutTime = (9*duration/10) * 1000 //ms
-            setTimeout(function() {
+            fadeInId = setTimeout(function() {
                 playerBase.animate({
                     "volume" : 0
                 }, fadeTime)
             }, triggerFadeOutTime)
         }
         player.onended = function() {
+            if (fadeInId !== null) {
+                clearTimeout(fadeInId); // Clear the timeout (just to be sure...)
+            }
             getNextSong();
         }
     }
