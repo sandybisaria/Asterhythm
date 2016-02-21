@@ -195,8 +195,12 @@ function onGetSpotifyTrack(data, textStatus, jqXHR) {
 
     // console.log(previewUrl);
     // console.log(data);
+
     var player = new Audio(previewUrl);
     player.play();
+    player.onended = function() {
+        getNextSong();
+    }
 
     // Load the lyrics from ChartLyrics
     var getChartlyricsTrackUrl = chartlyricsBaseUrl + "SearchLyricDirect";
@@ -235,6 +239,8 @@ function onGetLyrics(data, textStatus, jqXHR) {
 
     if (typeof lyrics === "string") {
         $("#lyrics").html(lyrics.split("\n").join("<br/>"));
+    } else {
+        $("#lyrics").html("");
     }
 }
 
