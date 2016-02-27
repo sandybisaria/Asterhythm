@@ -1,321 +1,225 @@
-jQuery.ajaxSettings.traditional = true; // For proper param serialization
-
-var echonestBaseUrl = "http://developer.echonest.com/";
-var echonestApiKey = "I6TZLAVYDEBYBNJIE";
+var echonestBaseUrl = "http://developer.echonest.com/"
+var echonestApiKey = "I6TZLAVYDEBYBNJIE"
+var bucketVals = ["id:spotify", "tracks"] // Used in many Echo Nest requests
 
 var spotifyBaseUrl = "https://api.spotify.com/"
 
 var chartlyricsBaseUrl = "http://api.chartlyrics.com/apiv1.asmx/"
 
-var sessionId = "";
-var bucketVals = ["id:spotify", "tracks"]; // Used in many Echo Nest requests
-
-var remixerContext = null;
-
-var clearSession = function() {
-    var deleteUrl = echonestBaseUrl + "api/v4/playlist/dynamic/delete";
-    var deleteParams = {
-        "api_key" : echonestApiKey,
-        "session_id" : sessionId
-    };
-
-    $.getJSON(deleteUrl, deleteParams);
-}
+var sessionId = "" // The `user's current session ID
 
 window.onbeforeunload = function() {
-    if (sessionId != "") {
-        clearSession(); // Delete the session (for now)
+    if (sessionId !== "") {
+        // Delete the session from Echo Nest (so we don't exceed the limit)
+
+        var deleteUrl = echonestBaseUrl + "api/v4/playlist/dynamic/delete"
+        var deleteParams = {
+            "api_key" : echonestApiKey,
+            "session_id" : sessionId,
+            "_" : Math.random() // Necessary to prevent browser caching (of repeated queries)
+        }
+        deleteUrl += formatParams(deleteParams)
+
+        var deleteRequest = new XMLHttpRequest()
+        deleteRequest.open("GET", deleteUrl, true)
+        deleteRequest.onreadystatechange = function() {
+            if (deleteRequest.readyState === 4) {
+                console.log("successfully logged out")
+            }
+        }
+        deleteRequest.send()
     }
 }
 
-$(document).ready(function () {
-    $("#song-content").hide();
-    $("#search-bar").submit(function() {
-        createPlaylist();
-        return false;
-    })
-});
+window.onload = function() {
+    document.getElementById("search-bar").onsubmit = createPlaylist
+}
 
 function createPlaylist() {
-    var query = $("#query").val();
-    var pref = $("input[name=pref]:checked").val();
+    var query = document.getElementById("search-bar-query").value
+    var filter = document.getElementById("search-bar-type-select").value
 
-    if (query === "") {
-        // alert("Please search for something");
-        return;
-    }
-
-    var createPlaylistUrl = echonestBaseUrl + "api/v4/playlist/dynamic/create";
+    var createPlaylistUrl = echonestBaseUrl + "api/v4/playlist/dynamic/create"
     var createPlaylistParams = {
         "api_key" : echonestApiKey,
         "bucket" : bucketVals,
-        "limit" : true
+        "limit" : true,
+        "_" : Math.random() // Necessary to prevent browser caching (of repeated queries)
     }
 
-    switch (pref) {
-        case "genre": {
-            createPlaylistParams.type = "genre-radio";
-            createPlaylistParams.genre = query;
+    if (filter === "song") {
+        createPlaylistParams.type = "song-radio";
 
-            $.ajax({
-                "cache" : false, // Necessary so the browser doesn't return old responses
-                "data" : createPlaylistParams,
-                "dataType" : "json",
-                "url" : createPlaylistUrl
-            })
-                .done(onCreatePlaylist)
-                .fail(onCreatePlaylistError);
-            break;
+        // Must look up the song's actual title
+        var songSearchUrl = echonestBaseUrl + "api/v4/song/search"
+        var songSearchParams = {
+            "api_key" : echonestApiKey,
+            "bucket" : bucketVals,
+            "limit" : true,
+            "combined" : query, // "Combined" in case someone says a song with its artist
+            "results" : 1 // Just use the first one for now (may get more songs)
         }
 
-        case "artist": {
-            createPlaylistParams.type = "artist-radio";
-            createPlaylistParams.artist = query;
+        songSearchUrl += formatParams(songSearchParams)
+        var songSearchReq = new XMLHttpRequest()
+        songSearchReq.open("GET", songSearchUrl, true)
+        songSearchReq.responseType = "json"
+        songSearchReq.onreadystatechange = function() {
+            if (songSearchReq.readyState == 4) {
+                if (songSearchReq.status == 200) {
+                    var res = songSearchReq.response.response
+                    var songs = res.songs;
+                    if (songs.length > 0) {
+                        createPlaylistParams.song_id = songs[0].id
+                        createPlaylistUrl += formatParams(createPlaylistParams)
 
-            $.ajax({
-                "cache" : false,
-                "data" : createPlaylistParams,
-                "dataType" : "json",
-                "url" : createPlaylistUrl
-            })
-                .done(onCreatePlaylist)
-                .fail(onCreatePlaylistError);
-            break;
-        }
-
-        case "song": {
-            createPlaylistParams.type = "song-radio";
-
-            var songSearchUrl = echonestBaseUrl + "api/v4/song/search";
-            var songSearchParams = {
-                "api_key" : echonestApiKey,
-                "bucket" : bucketVals,
-                "limit" : true,
-                "combined" : query, // In case someone says a song with its artist
-                "results" : 1 // Just try the first one
-            };
-            $.ajax({
-                "cache" : false,
-                "data" : songSearchParams,
-                "dataType" : "json",
-                "url" : songSearchUrl
-            })
-                .done(function(data) {
-                    var response = data.response;
-                    
-                    var songs = response.songs;
-                    if (songs.length === 0) {
-                        onInvalidQuery();
-                        return;
+                        makeCreatePlaylistRequest(createPlaylistUrl)
+                    } else {
+                        // May want to change to a function
+                        alert("Sorry, no songs could be found")
                     }
 
-                    createPlaylistParams.song_id = songs[0].id;
-                    $.ajax({
-                        "cache" : false,
-                        "data" : createPlaylistParams,
-                        "dataType" : "json",
-                        "url" : createPlaylistUrl
-                    })
-                        .done(onCreatePlaylist)
-                        .fail(onCreatePlaylistError);
-                })
-                .fail(onCreatePlaylistError);
-            break;
+                } else {
+                    // May want to change to reflect a failed song search
+                    onCreatePlaylistError(songSearchReq)
+                }
+            }
         }
+        songSearchReq.send()
+
+    } else {
+        if (filter === "genre") {
+            createPlaylistParams.type = "genre-radio";
+            createPlaylistParams.genre = query;
+        } else if (filter === "artist") {
+            createPlaylistParams.type = "artist-radio";
+            createPlaylistParams.artist = query;
+        }
+
+        createPlaylistUrl += formatParams(createPlaylistParams)
+        makeCreatePlaylistRequest(createPlaylistUrl)
     }
 }
 
-function onCreatePlaylist(data, textStatus, jqXHR) {
-    var response = data.response;
-
-    sessionId = response.session_id;
-    
-    getNextSong();
-}
-
-function onCreatePlaylistError(jqXHR, textStatus, errorThrown) {
-    var status = jqXHR.responseJSON.response.status;
-    switch (status.code) {
-        case 5: {
-            onInvalidQuery();
+function makeCreatePlaylistRequest(createPlaylistUrl) {
+    var createPlaylistRequest = new XMLHttpRequest()
+    createPlaylistRequest.open("GET", createPlaylistUrl, true)
+    createPlaylistRequest.responseType = "json"
+    createPlaylistRequest.onreadystatechange = function() {
+        if (createPlaylistRequest.readyState === 4) {
+            if (createPlaylistRequest.status === 200) {
+                onCreatePlaylistSuccess(createPlaylistRequest)
+            } else {
+                onCreatePlaylistError(createPlaylistRequest)
+            }
         }
     }
+    createPlaylistRequest.send()
 }
 
-function onInvalidQuery() {
-    alert("Looks like your query was invalid");
+function onCreatePlaylistError(req) {
+    alert("Error " + req.status + ': ' + req.statusText)
+}
+
+function onCreatePlaylistSuccess(req) {
+    var res = req.response.response
+    sessionId = res.session_id
+    console.log(sessionId)
+    getNextSong()
 }
 
 function getNextSong() {
-    var nextUrl = echonestBaseUrl + "api/v4/playlist/dynamic/next";
+    var nextUrl = echonestBaseUrl + "api/v4/playlist/dynamic/next"
     var nextParams = {
         "api_key" : echonestApiKey,
-        "session_id" : sessionId
+        "session_id" : sessionId,
+        "_" : Math.random() // Necessary to prevent browser caching (of repeated queries)
     }
+    nextUrl += formatParams(nextParams)
 
-    $.ajax({
-        "cache" : false,
-        "data" : nextParams,
-        "dataType" : "json",
-        "url" : nextUrl
-    })
-        .done(onGetNextSong)
-        .fail(onGetNextSongError)
+    var nextReq = new XMLHttpRequest()
+    nextReq.open("GET", nextUrl, true)
+    nextReq.responseType = "json"
+    nextReq.onreadystatechange = function() {
+        if (nextReq.readyState === 4) {
+            if (nextReq.status === 200) {
+                onGetNextSongSuccess(nextReq)
+            } else {
+                onGetNextSongError(nextReq)
+            }
+        }
+    }
+    nextReq.send()
+}
+
+function onGetNextSongError(req) {
+    onCreatePlaylistError(req) // For now...
 }
 
 function foreignToSpotifyId(foreignId) {
+    // The foreign ID is of format "spotify:track:foreign_id" and we only need the last part
+
     var fields = foreignId.split(':');
-    return fields[fields.length - 1];
-}
-
-function onGetNextSong(data, textStatus, jqXHR) {
-    var response = data.response;
-
-    var songs = response.songs;
-    var nextSong = songs[0];
-    // console.log(nextSong);
+    if (fields[0] == "spotify") {
+        return fields[fields.length - 1];
+    }
     
-    // Get the song from Spotify?..
-    var spotifyId = foreignToSpotifyId(nextSong.tracks[0].foreign_id);
-    var getSpotifyTrackUrl = spotifyBaseUrl + "v1/tracks/" + spotifyId.toString();
-    $.ajax({
-        "cache" : false,
-        "url" : getSpotifyTrackUrl
-    })
-        .done(function (data, textStatus, jqXHR) {
-            onGetSpotifyTrack(data, textStatus, jqXHR, nextSong)
-        })
-        .fail(onGetSpotifyTrackError);
+    return ""
 }
 
-function onGetNextSongError(jqXHR, textStatus, errorThrown) {
-    console.log(jqXHR);
-    console.log(textStatus);
-    console.log(errorThrown);
-}
+function onGetNextSongSuccess(req) {
+    var res = req.response.response
 
-function onGetSpotifyTrack(data, textStatus, jqXHR, echonestTrack) {
-    var previewUrl = data.preview_url;
-    if (previewUrl === undefined || previewUrl == null) {
-        getNextSong(); // For now, skip songs without
-        return;
+    var songs = res.songs
+    var nextSong = songs[0]
+
+    var spotifyId = foreignToSpotifyId(nextSong.tracks[0].foreign_id)
+    if (spotifyId != "") {
+        var getTrackUrl = spotifyBaseUrl + "v1/tracks/" + spotifyId
+        console.log(getTrackUrl)
+        var getTrackReq = new XMLHttpRequest()
+        getTrackReq.open("GET", getTrackUrl, true)
+        getTrackReq.responseType = "json"
+        getTrackReq.onreadystatechange = function() {
+            if (getTrackReq.readyState == 4) {
+                if (getTrackReq.status == 200) {
+                    onGetSpotifyTrackSuccess(getTrackReq)
+                } else {
+                    onGetSpotifyTrackError(getTrackReq)
+                }
+            }
+        }
+        getTrackReq.send()
     }
+}
 
-    // Load the track into the remixer
-    if (remixerContext === null) {
-        remixerContext= new AudioContext();
+function onGetSpotifyTrackError(req) {
+    onCreatePlaylistError(req) // For now...
+}
+
+function hideSearchContainer() {
+    searchContainer = document.getElementById("search-container")
+    var oldClass = searchContainer.className
+    searchContainer.className += " animated fadeOutUp"
+    var onAnimationEnd = function() {
+        searchContainer.className = oldClass
+        searchContainer.style.display = "none"
+        searchContainer.removeEventListener("animationend", onAnimationEnd)
     }
-    var remixer = createJRemixer(remixerContext, $, echonestApiKey);
-    var player = remixer.getPlayer();
-    remixer.remixTrackById(echonestTrack.id, previewUrl, function(track, percent) {
-        remixSong(track, percent, player, previewUrl);
-    });
-
-    // Load the lyrics from ChartLyrics
-    var getChartlyricsTrackUrl = chartlyricsBaseUrl + "SearchLyricDirect";
-    var artist = data.artists[0].name;
-    var title = data.name;
-
-    $("#song-artist").html(artist);
-    $("#song-title").html(title);
-
-    adjustUI()
-
-    var getChartlyricsTrackParams = {
-        "artist" : artist,
-        "song" : title,
-    }
-    $.ajax({
-        "cache" : false,
-        "data" : getChartlyricsTrackParams,
-        "dataType" : "xml",
-        "url" : getChartlyricsTrackUrl
-    })
-        .done(onGetLyrics)
-        .fail(onGetLyricsError);
+    searchContainer.addEventListener("animationend", onAnimationEnd)
 }
 
-function adjustUI() {
-    // Hide searching UI; made it this far so no need to search...
-    $("#search-content").hide();
-    $("#song-content").show();
-}
+function onGetSpotifyTrackSuccess(req) {
+    var res = req.response
+    var previewUrl = res.preview_url
 
-function onGetSpotifyTrackError(jqXHR, textStatus, errorThrown) {
-    console.log(jqXHR);
-    console.log(textStatus);
-    console.log(errorThrown);
-}
+    if (previewUrl !== undefined && previewUrl !== null) {
+        hideSearchContainer()
 
-function onGetLyrics(data, textStatus, jqXHR) {
-    var jsonData = JXON.build(data);
-    var lyrics = jsonData.getlyricresult.lyric;
-
-    if (typeof lyrics === "string") {
-        $("#lyrics").html(lyrics.split("\n").join("<br/>"));
+        var player = document.getElementById("song-streamer")
+        player.src = previewUrl
+        player.play()
     } else {
-        $("#lyrics").html("");
-    }
-}
-
-function onGetLyricsError(jqXHR, textStatus, errorThrown) {
-    console.log(jqXHR);
-    console.log(textStatus);
-    console.log(errorThrown);
-}
-
-function remixSong(track, percent, player, songUrl) {
-    if (track.status === "ok") {
-        var gainCounter = 0;
-        var gainArray = new Array();
-
-        var remixed = new Array();
-        var beatCount = track.analysis.beats.length
-        for (var i=0; i < beatCount; i++) {
-            beat = track.analysis.beats[i]
-            if (i/beatCount < 0.1) {
-                gainArray.push(10*i/beatCount)
-            } else if ((10-i)/beatCount > 0.9) {
-                gainArray.push(10*(10-i)/beatCount)
-            } else {
-                gainArray.push(1)
-            }
-            remixed.push(beat)
-        }
-
-        // player.play(0, remixed);
-
-        var playerBase = $("#songstreamer")
-        var player = playerBase[0]
-        player.src = songUrl;
-        player.volume = 0;
-        player.play();
-
-        var fadeInId = null;
-        player.ondurationchange = function() {
-            var duration = player.duration;
-            if (duration === NaN) {
-                return;
-            }
-
-            var fadeTime = (duration/10) * 1000 //ms
-
-            playerBase.animate({
-                "volume" : 1
-            }, fadeTime)
-
-            var triggerFadeOutTime = (8.5*duration/10) * 1000 //ms
-            fadeInId = setTimeout(function() {
-                playerBase.animate({
-                    "volume" : 0
-                }, fadeTime)
-            }, triggerFadeOutTime)
-        }
-        player.onended = function() {
-            if (fadeInId !== null) {
-                clearTimeout(fadeInId); // Clear the timeout (just to be sure...)
-            }
-            getNextSong();
-        }
+        getNextSong()
     }
 }

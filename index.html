@@ -4,6 +4,7 @@
         <title>Asterhythm</title>
 
         <link href='https://fonts.googleapis.com/css?family=Quicksand:700' rel='stylesheet' type='text/css'>
+        <link type="text/css" rel="stylesheet" href="css/animate.css" />
         <script src="http://code.jquery.com/jquery-1.12.0.min.js"></script>
         <script type="text/javascript" src="js/jxon.js"></script>
         <script type="text/javascript" src="js/remix.js"></script>
@@ -15,11 +16,12 @@
 
         <!-- My files -->
         <link type="text/css" rel="stylesheet" href="css/style.css" />
+        <script type="text/javascript" src="js/utility.js"></script>
 		<script type="text/javascript" src="js/script.js"></script>
 	</head>
 
 	<body>
-        <nav class="navbar navbar-inverse">
+        <nav class="navbar navbar-default">
             <div class="container-fluid">
                 <ul class="nav navbar-nav navbar-right">
                     <li><a href="#">About</a></li>
@@ -27,7 +29,7 @@
             </div>
         </nav>
 
-        <div class="container-fluid">
+        <div class="container-fluid" id="search-container">
             <div class="row">
                 <div class="col-md-2"></div>
                 <div class="col-md-8">
@@ -38,38 +40,41 @@
                 </div>
                 <div class="col-md-2"></div>
             </div>
+
+            <div class="row">
+                <div class="col-md-2"></div>
+                <div class="col-md-8">
+                    <form class="form-inline" id="search-bar">
+                        <div class="form-group">
+                            <label class="sr-only" for="search-bar-query">Search</label>
+                            <input class="form-control" type="text" id="search-bar-query" placeholder="Search and sit back..." required>
+
+                            <label class="sr-only" for"search-bar-type-select">Search Type</label>
+                            <select class="form-control" id="search-bar-type-select">
+                                <option value="genre">Genre</option>
+                                <option value="artist">Artist</option>
+                                <option value="song">Song</option>
+                            </select>
+
+                            <button class="form-control" type="submit" class="btn btn-default">Let's Go!</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-2"></div>
+            </div>
         </div>
-        
-        <!--
-        <div id="title-bar">
-            <div>
-                <img src="media/logo_inverted.png" alt="Asterhythm Logo">
-                <h1 id="site-title">Asterhythm</h1>
+
+        <div class="container-fluid" id="play-container">
+            <div class="row">
+                <div class="col-md-4"></div>
+                <div class="col-md-4">
+                    <audio id="song-streamer"></audio>
+                </div>
+                <div class="col-md-4"></div>
             </div>
         </div>
         
-        <div id="search-content">
-    		<form id="search-bar">
-                <input type="text" id="query" placeholder="Search and sit back..." required>
-                <input type="submit" id="query-btn" value="Let's Go!">
-            </form>
-
-    		<form id="search-filter">
-                <div class="item-pair">
-                    <label for="genre">Genre</label>
-                    <input type="radio" name="pref" id="genre" value="genre" checked><br>
-                </div>
-                <div class="item-pair">
-                    <label for="artist">Artist</label>
-        			<input type="radio" name="pref" id="artist" value="artist"><br>
-                </div>
-                <div class="item-pair">
-                    <label for="song">Song</label>
-        			<input type="radio" name="pref" id="song" value="song"><br>
-                </div>
-    		</form>
-        </div>
-
+        <!--
         <div id="song-content">
             <audio id="songstreamer"></audio>
             <div id="song-info">

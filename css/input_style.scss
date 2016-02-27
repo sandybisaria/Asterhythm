@@ -1,8 +1,10 @@
 $default_font_family: Helvetica;
 
-$off_white: #F5F5F5;
-$dark_blue: #263E75;
-$black: #000000;
+$off_white : #F5F5F5;
+$dark_grey : #757575;
+$grey      : #C2C2C2;
+$dark_blue : #263E75;
+$black     : #000000;
 
 body  {
   background-image: url("../media/background.jpg");
@@ -10,29 +12,54 @@ body  {
   background-repeat: repeat;
 }
 
-.navbar {
-    background-color: $black;
-    border-width: 0em;
-}
+@import 'navbar'; // <3 sass
 
 #title-bar {
     display: flex; // <3 flex
     justify-content: center;
     align-items: center;
-    margin-top: 1em;
+    margin-top: 7em;
+
+    $margin_between: 0.4em;
 
     img {
         width: 8em;
         height: 8em;
-        margin-right: 0.4em;
+        margin-right: $margin_between;
     }
 
     #site-title {
         font-family: 'Quicksand', $default_font_family;
         color: $off_white;
         font-size: 6rem;
-        margin-left: 0.4em;
+        margin-left: $margin_between;
         margin-top: 0.8em;
+    }
+}
+
+#search-bar {
+    margin-top: 2em;
+
+    .form-group {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        $margin_between: 1em;
+
+        #search-bar-query {
+            width: 30em;
+            margin-left: $margin_between;
+        }
+
+        #search-bar-type-select {
+            margin-left: $margin_between;
+            margin-right: $margin_between;
+        }
+
+        button {
+            margin-right: $margin_between;
+        }
     }
 }
 
