@@ -32,7 +32,10 @@ window.onbeforeunload = function() {
 }
 
 window.onload = function() {
-    document.getElementById("search-bar").onsubmit = createPlaylist
+    document.getElementById("search-bar").onsubmit = function() {
+        createPlaylist()
+        return false
+    }
     
     // Init audio.js
     audiojs.events.ready(function() {
@@ -108,6 +111,7 @@ function createPlaylist() {
 
 function makeCreatePlaylistRequest(createPlaylistUrl) {
     var createPlaylistRequest = new XMLHttpRequest()
+    console.log(createPlaylistUrl)
     createPlaylistRequest.open("GET", createPlaylistUrl, true)
     createPlaylistRequest.responseType = "json"
     createPlaylistRequest.onreadystatechange = function() {
