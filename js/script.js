@@ -33,6 +33,11 @@ window.onbeforeunload = function() {
 
 window.onload = function() {
     document.getElementById("search-bar").onsubmit = createPlaylist
+    
+    // Init audio.js
+    audiojs.events.ready(function() {
+        var as = audiojs.createAll();
+    });
 }
 
 function createPlaylist() {
@@ -197,7 +202,7 @@ function onGetSpotifyTrackError(req) {
     onCreatePlaylistError(req) // For now...
 }
 
-function hideSearchContainer() {
+function hideSearchContainer(onHideFn) {
     searchContainer = document.getElementById("search-container")
     var oldClass = searchContainer.className
     searchContainer.className += " animated fadeOutUp"
@@ -205,8 +210,22 @@ function hideSearchContainer() {
         searchContainer.className = oldClass
         searchContainer.style.display = "none"
         searchContainer.removeEventListener("animationend", onAnimationEnd)
+
+        onHideFn()
     }
     searchContainer.addEventListener("animationend", onAnimationEnd)
+}
+
+function showPlayContainer() {
+    playContainer = document.getElementById("play-container")
+    var oldClass = playContainer.className
+    playContainer.className += " animated fadeInDown"
+    playContainer.style.display = null
+    var onAnimationEnd = function() {
+        playContainer.className = oldClass
+        playContainer.removeEventListener("animationend", onAnimationEnd)
+    }
+    playContainer.addEventListener("animationend", onAnimationEnd)
 }
 
 function onGetSpotifyTrackSuccess(req) {
@@ -214,12 +233,16 @@ function onGetSpotifyTrackSuccess(req) {
     var previewUrl = res.preview_url
 
     if (previewUrl !== undefined && previewUrl !== null) {
-        hideSearchContainer()
+        hideSearchContainer(showPlayContainer)
 
-        var player = document.getElementById("song-streamer")
-        player.src = previewUrl
-        player.play()
+        playSong(previewUrl)
     } else {
         getNextSong()
     }
+}
+
+function playSong(url) {
+    var player = document.getElementById("song-streamer")
+    player.src = url
+    player.play()
 }
