@@ -75,4 +75,13 @@ body {
     #search-bar .form-group button {
       margin-right: 1em; }
 
+#song-contents {
+  display: flex;
+  justify-content: center;
+  align-items: center; }
+  #song-contents #song-info {
+    font-family: "Quicksand", Helvetica;
+    color: #F5F5F5;
+    font-size: 2rem; }
+
 /*# sourceMappingURL=style.css.map */

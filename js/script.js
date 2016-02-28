@@ -36,11 +36,6 @@ window.onload = function() {
         createPlaylist()
         return false
     }
-    
-    // Init audio.js
-    audiojs.events.ready(function() {
-        var as = audiojs.createAll();
-    });
 }
 
 function createPlaylist() {
@@ -230,6 +225,8 @@ function showPlayContainer() {
         playContainer.removeEventListener("animationend", onAnimationEnd)
     }
     playContainer.addEventListener("animationend", onAnimationEnd)
+
+    //TODO Design a nice player that goes well with the website
 }
 
 function onGetSpotifyTrackSuccess(req) {
@@ -238,8 +235,12 @@ function onGetSpotifyTrackSuccess(req) {
 
     if (previewUrl !== undefined && previewUrl !== null) {
         hideSearchContainer(showPlayContainer)
-
         playSong(previewUrl)
+
+        var artist = res.artists[0].name;
+        var title = res.name;
+
+        document.getElementById("song-info").innerHTML = "Now playing " + title + " by " + artist
     } else {
         getNextSong()
     }
@@ -248,5 +249,8 @@ function onGetSpotifyTrackSuccess(req) {
 function playSong(url) {
     var player = document.getElementById("song-streamer")
     player.src = url
+    player.onended = function() {
+        getNextSong()
+    }
     player.play()
 }
